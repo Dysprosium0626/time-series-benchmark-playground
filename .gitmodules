@@ -1,3 +1,0 @@
-[submodule "greptimedb-ingester-rust"]
-	path = greptimedb-ingester-rust
-	url = https://github.com/GreptimeTeam/greptimedb-ingester-rust

@@ -1,33 +1,30 @@
+use derive_new::new;
 use rand::{Rng, SeedableRng};
-use std::io::{self, Write};
+use std::io::Write;
 
 use crate::common::config::FileFormat;
 
-struct DataGeneratorConfig {
-    scale: i64,
+#[derive(new)]
+pub struct DataGeneratorConfig {
+    // scale: i64,
     interval: i64,
     // ISO 8601
     time_start: String,
     time_end: String,
-
-    limit: i64,
-    use_case: String,
     format: FileFormat,
     seed: u64,
+    limit: i64,
+    // use_case: String,
 }
-
-struct DataGenerator {
+#[derive(new)]
+pub struct DataGenerator {
     config: DataGeneratorConfig,
 }
 
 impl DataGenerator {
-    fn new(config: DataGeneratorConfig) -> Self {
-        DataGenerator { config }
-    }
-
-    fn generate<W: Write>(&self, writer: &mut W) {
+    pub fn generate<W: Write>(&self, writer: &mut W) {
         writer
-            .write_all(b"time.value\n")
+            .write_all(b"tag,ts,v\n")
             .expect("Unable to write header");
         let mut rng = rand::rngs::StdRng::seed_from_u64(self.config.seed);
         let format = &self.config.format;
@@ -39,15 +36,17 @@ impl DataGenerator {
                 let end_time = chrono::DateTime::parse_from_rfc3339(&self.config.time_end)
                     .expect("Unable to parse time")
                     .timestamp();
+                let mut cnt = 0;
                 while start_time < end_time {
                     let value = rng.gen_range(0..self.config.limit);
                     if let Some(formatted_time) = chrono::DateTime::from_timestamp(start_time, 0) {
-                        let line = format!("{},{}\n", formatted_time.to_rfc3339(), value);
+                        let line = format!("{},{},{}\n", cnt, formatted_time.to_rfc3339(), value);
                         writer
                             .write_all(line.as_bytes())
                             .expect("Unable to write data");
                         // Increment the current time by the interval
                         start_time += self.config.interval;
+                        cnt += 1;
                     }
                 }
                 writer.flush().expect("Unable to flush writer");
@@ -67,14 +66,14 @@ mod tests {
     #[test]
     fn test_data_generator_output() {
         let config = DataGeneratorConfig {
-            scale: 10,
+            // scale: 10,
             interval: 60,
             time_start: "2021-01-01T00:00:00Z".to_string(),
             time_end: "2021-01-01T01:00:00Z".to_string(),
             format: config::FileFormat::Greptime,
             seed: 123,
             limit: 10,
-            use_case: "log".to_string(),
+            // use_case: "log".to_string(),
         };
 
         let generator = DataGenerator { config };
