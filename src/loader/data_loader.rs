@@ -13,7 +13,7 @@ pub struct DataLoaderConfig {
 }
 
 pub trait DataLoader {
-    fn load_data(&self);
+    fn load_data(&self, usql: Option<Usql>);
 }
 
 pub struct GreptimeDataLoader {
@@ -24,8 +24,10 @@ impl GreptimeDataLoader {
     pub fn config(&self) -> &DataLoaderConfig {
         &self.config
     }
+}
 
-    pub fn generate_inserts(self, usql: Option<Usql>) {
+impl DataLoader for GreptimeDataLoader {
+    fn load_data(&self, usql: Option<Usql>) {
         let mut usql_conn = usql.unwrap_or_else(|| Usql::new("mysql://127.0.0.1:4002"));
 
         let file = File::open("./data.gz").expect("Failed to open file");
@@ -58,7 +60,6 @@ impl GreptimeDataLoader {
         execute_sql(&mut usql_conn, &insert_stmt);
     }
 }
-
 fn execute_sql(usql_conn: &mut Usql, sql: &str) {
     println!("{:?}", sql);
     match usql_conn.execute(sql) {
@@ -110,7 +111,7 @@ fn gen_insert_stmt(hypertable: &str, cols: &[&str], data: &[Vec<String>]) -> Str
 mod tests {
     use crate::usql::usql::Usql;
 
-    use super::{DataLoaderConfig, GreptimeDataLoader};
+    use super::{DataLoader, DataLoaderConfig, GreptimeDataLoader};
 
     #[test]
     fn test_generate_inserts() {
@@ -121,6 +122,6 @@ mod tests {
 
         let loader = GreptimeDataLoader { config };
         let usql = Usql::new("mysql://127.0.0.1:4002");
-        loader.generate_inserts(Some(usql));
+        loader.load_data(Some(usql));
     }
 }

@@ -3,7 +3,7 @@ use std::io;
 use greptime_bench::{
     common::config,
     generator::data_generator::{DataGenerator, DataGeneratorConfig},
-    loader::data_loader::{DataLoaderConfig, GreptimeDataLoader},
+    loader::data_loader::{DataLoader, DataLoaderConfig, GreptimeDataLoader},
     usql::usql::Usql,
 };
 use std::env;
@@ -55,7 +55,7 @@ fn load_data() {
 
     let loader = GreptimeDataLoader { config };
     let usql = Usql::new("mysql://127.0.0.1:4002");
-    loader.generate_inserts(Some(usql));
+    loader.load_data(Some(usql));
 }
 
 fn generate_queries() {
