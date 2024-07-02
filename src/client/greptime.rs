@@ -1,4 +1,4 @@
-use crate::common::error::{self, CreateChannelSnafu, IllegalDatabaseResponseSnafu, Result};
+use crate::common::error::{self,  IllegalDatabaseResponseSnafu, Result};
 use greptime_proto::v1::{
     auth_header::AuthScheme, greptime_database_client::GreptimeDatabaseClient,
     greptime_request::Request, greptime_response::Response, AffectedRows, AuthHeader,

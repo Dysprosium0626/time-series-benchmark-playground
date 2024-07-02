@@ -32,6 +32,9 @@ impl LogData {
             ])),
         }
     }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 /// LogDataGenerator, the schema of Log Data can be referred to
