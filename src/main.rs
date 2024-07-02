@@ -1,8 +1,10 @@
-use std::io;
+use std::fs::File;
 
 use greptime_bench::{
-    common::config,
-    generator::data_generator::{DataGenerator, DataGeneratorConfig},
+    generator::{
+        data_generator::{DataGenerator, DataGeneratorConfig, UseCase},
+        log_data_generator::{LogData, LogDataGenerator},
+    },
     loader::data_loader::{DataLoader, DataLoaderConfig, GreptimeDataLoader},
     usql::usql::Usql,
 };
@@ -22,31 +24,39 @@ fn main() {
     }
 
     match args[1].as_str() {
-        "generate_data" => generate_data(),
+        "generate_data" => {
+            let file_path = "./data.parquet";
+            generate_data(file_path);
+        }
         "load" => load_data(),
         "generate_queries" => generate_queries(),
         _ => println!("Invalid command"),
     }
 }
+fn generate_data(file_path: &str) {
+    let log_data_generator = LogDataGenerator {
+        config: DataGeneratorConfig::new(
+            60,
+            "2021-01-01T00:00:00Z".to_string(),
+            "2021-01-01T01:00:00Z".to_string(),
+            123,
+            10,
+            UseCase::Log,
+        ),
+        log_data: LogData::new(),
+    };
 
-fn generate_data() {
-    let config = DataGeneratorConfig::new(
-        // 10,
-        60,
-        "2021-01-01T00:00:00Z".to_string(),
-        "2021-01-01T01:00:00Z".to_string(),
-        config::FileFormat::Greptime,
-        123,
-        10,
-        // "log".to_string(),
-    );
+    let record_batch = log_data_generator
+        .generate()
+        .expect("Failed to generate record batch");
 
-    let generator = DataGenerator::new(config);
-    let stdout = io::stdout();
-    let mut handle = stdout.lock();
-    generator.generate(&mut handle);
+    // 打开指定的文件路径
+    let file = File::create(file_path).expect("Failed to create file");
+
+    log_data_generator
+        .write(&record_batch, file)
+        .expect("Failed to write record batch to file");
 }
-
 fn load_data() {
     let config = DataLoaderConfig {
         workers: 1,
