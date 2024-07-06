@@ -1,12 +1,8 @@
 use std::fs::File;
 
-use greptime_bench::{
-    generator::{
-        data_generator::{DataGenerator, DataGeneratorConfig, UseCase},
-        log_data_generator::{LogData, LogDataGenerator},
-    },
-    loader::data_loader::{DataLoader, DataLoaderConfig, GreptimeDataLoader},
-    usql::usql::Usql,
+use greptime_bench::generator::{
+    data_generator::{DataGenerator, DataGeneratorConfig, UseCase},
+    log_data_generator::{LogData, LogDataGenerator},
 };
 use std::env;
 
@@ -58,14 +54,14 @@ fn generate_data(file_path: &str) {
         .expect("Failed to write record batch to file");
 }
 fn load_data() {
-    let config = DataLoaderConfig {
-        workers: 1,
-        chunk_size: 10,
-    };
+    // let config = DataLoaderConfig {
+    //     workers: 1,
+    //     chunk_size: 10,
+    // };
 
-    let loader = GreptimeDataLoader { config };
-    let usql = Usql::new("mysql://127.0.0.1:4002");
-    loader.load_data(Some(usql));
+    // let loader = GreptimeDataLoader { config };
+    // let usql = Usql::new("mysql://127.0.0.1:4002");
+    // loader.load_data(Some(usql));
 }
 
 fn generate_queries() {

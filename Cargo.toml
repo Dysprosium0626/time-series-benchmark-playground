@@ -14,7 +14,6 @@ tonic = { version = "0.11", features = ["tls", "tls-roots", "gzip", "zstd"] }
 rand = "0.8.5"
 chrono = "0.4.38"
 sqlx = { version = "0.7.4", features = ["mysql", "runtime-tokio-rustls"] }
-anyhow = "1.0.86"
 flate2 = "1.0.30"
 parquet = "52.0.0"
 arrow = "52.0.0"

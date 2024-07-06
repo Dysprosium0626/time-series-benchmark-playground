@@ -2,8 +2,9 @@ use std::fs::File;
 
 use arrow::array::RecordBatch;
 use derive_new::new;
+use greptime_proto::v1::ColumnSchema;
 
-use anyhow::Result;
+use crate::common::error::Result;
 
 /// Data use case, currently we only implement Log data.
 pub enum UseCase {
@@ -29,4 +30,8 @@ pub trait DataGenerator {
     fn generate(&self) -> Result<RecordBatch>;
     /// Write Data
     fn write(&self, to_write: &RecordBatch, file: File) -> Result<()>;
+    // Get schema of generated data
+    fn schema() -> Vec<ColumnSchema>;
+    // Table name
+    fn table_name() -> &'static str;
 }

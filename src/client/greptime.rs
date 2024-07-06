@@ -1,13 +1,13 @@
-use crate::common::error::{self,  IllegalDatabaseResponseSnafu, Result};
+use crate::common::error::{self, IllegalDatabaseResponseSnafu, Result};
 use greptime_proto::v1::{
     auth_header::AuthScheme, greptime_database_client::GreptimeDatabaseClient,
     greptime_request::Request, greptime_response::Response, AffectedRows, AuthHeader,
     GreptimeRequest, RequestHeader, RowInsertRequests,
 };
-use snafu::{location, Location, OptionExt, ResultExt};
+use snafu::{OptionExt, ResultExt};
 use tonic::transport::Channel;
 
-pub(crate) struct DatabaseClient {
+pub struct DatabaseClient {
     pub(crate) inner: GreptimeDatabaseClient<Channel>,
     dbname: String,
     auth_header: Option<AuthHeader>,
@@ -17,9 +17,7 @@ impl DatabaseClient {
     pub async fn new(dbname: impl Into<String>) -> Result<Self> {
         let inner = GreptimeDatabaseClient::connect("http://localhost:4001")
             .await
-            .context(error::CreateChannelSnafu {
-                location: location!(),
-            })?;
+            .context(error::CreateChannelSnafu {})?;
         Ok(DatabaseClient {
             inner,
             dbname: dbname.into(),
@@ -80,39 +78,15 @@ impl DatabaseClient {
 #[cfg(test)]
 mod tests {
 
+    use crate::loader::{
+        f32_value, field, i32_value, string_value, tag, timestamp, timestamp_microsecond_value,
+    };
+
     use super::*;
     use derive_new::new;
     use greptime_proto::v1::{
-        value::ValueData, ColumnDataType, ColumnSchema, Row, RowInsertRequest, RowInsertRequests,
-        Rows, SemanticType, Value,
+        ColumnDataType, ColumnSchema, Row, RowInsertRequest, RowInsertRequests, Rows,
     };
-
-    pub fn tag(name: &str, datatype: ColumnDataType) -> ColumnSchema {
-        ColumnSchema {
-            column_name: name.to_string(),
-            semantic_type: SemanticType::Tag as i32,
-            datatype: datatype as i32,
-            ..Default::default()
-        }
-    }
-
-    pub fn timestamp(name: &str, datatype: ColumnDataType) -> ColumnSchema {
-        ColumnSchema {
-            column_name: name.to_string(),
-            semantic_type: SemanticType::Timestamp as i32,
-            datatype: datatype as i32,
-            ..Default::default()
-        }
-    }
-
-    pub fn field(name: &str, datatype: ColumnDataType) -> ColumnSchema {
-        ColumnSchema {
-            column_name: name.to_string(),
-            semantic_type: SemanticType::Field as i32,
-            datatype: datatype as i32,
-            ..Default::default()
-        }
-    }
 
     #[derive(new)]
     struct WeatherRecord {
@@ -142,34 +116,6 @@ mod tests {
         ]
     }
 
-    #[inline]
-    pub fn timestamp_millisecond_value(v: i64) -> Value {
-        Value {
-            value_data: Some(ValueData::TimestampMillisecondValue(v)),
-        }
-    }
-
-    #[inline]
-    pub fn string_value(v: String) -> Value {
-        Value {
-            value_data: Some(ValueData::StringValue(v)),
-        }
-    }
-
-    #[inline]
-    pub fn f32_value(v: f32) -> Value {
-        Value {
-            value_data: Some(ValueData::F32Value(v)),
-        }
-    }
-
-    #[inline]
-    pub fn i32_value(v: i32) -> Value {
-        Value {
-            value_data: Some(ValueData::I32Value(v)),
-        }
-    }
-
     /// This function generates some random data and bundle them into a
     /// `InsertRequest`.
     ///
@@ -185,7 +131,7 @@ mod tests {
             .into_iter()
             .map(|record| Row {
                 values: vec![
-                    timestamp_millisecond_value(record.timestamp_millis),
+                    timestamp_microsecond_value(record.timestamp_millis),
                     string_value(record.collector),
                     f32_value(record.temperature),
                     i32_value(record.humidity),

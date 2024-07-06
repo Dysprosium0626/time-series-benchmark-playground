@@ -1,73 +1,38 @@
-use std::{
-    fs::File,
-    io::{BufRead, BufReader},
-};
+use std::{fs::File, path::PathBuf};
 
+use arrow::array::RecordBatch;
+use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
+use snafu::{location, Location, ResultExt};
+
+use crate::common::error::{
+    ArrowFileSnafu, EndOfParquetFileSnafu, InvalidFilePathSnafu, ReadParquetFileSnafu, Result,
+};
+use crate::generator::data_generator::UseCase;
 use crate::usql::usql::Usql;
 
-#[derive(Clone)]
 pub struct DataLoaderConfig {
-    // path: PathBuf,
-    pub workers: usize,
-    pub chunk_size: usize,
+    pub use_case: UseCase,
 }
 
 pub trait DataLoader {
-    fn load_data(&self, usql: Option<Usql>);
+    // Load data by Usql with auto-generated insert statement
+    fn load_data_by_usql(&self, usql: Option<Usql>);
+    fn load_data_from_raw_sql(&self, usql: Option<Usql>, raw_sql: &str);
+    fn load_data_from_parquet_file(
+        &self,
+        path: PathBuf,
+    ) -> impl std::future::Future<Output = Result<u32>> + Send;
 }
 
-pub struct GreptimeDataLoader {
-    pub config: DataLoaderConfig,
-}
-
-impl GreptimeDataLoader {
-    pub fn config(&self) -> &DataLoaderConfig {
-        &self.config
-    }
-}
-
-impl DataLoader for GreptimeDataLoader {
-    fn load_data(&self, usql: Option<Usql>) {
-        let mut usql_conn = usql.unwrap_or_else(|| Usql::new("mysql://127.0.0.1:4002"));
-
-        let file = File::open("./data.gz").expect("Failed to open file");
-        let gz = flate2::read::GzDecoder::new(file);
-        let mut reader = BufReader::new(gz);
-
-        // 读取 header
-        let mut header = String::new();
-        reader
-            .read_line(&mut header)
-            .expect("Failed to read header");
-        let header = header.trim_end();
-        let cols: Vec<&str> = header.split(',').collect();
-
-        let create_table_stmt = gen_create_table_stmt("measurement", &cols);
-        execute_sql(&mut usql_conn, &create_table_stmt);
-
-        // 读取数据行
-        let data: Vec<Vec<String>> = reader
-            .lines()
-            .map(|line| {
-                line.expect("Failed to read line")
-                    .split(',')
-                    .map(|v| v.trim().to_string())
-                    .collect()
-            })
-            .collect();
-
-        let insert_stmt = gen_insert_stmt("measurement", &cols, &data);
-        execute_sql(&mut usql_conn, &insert_stmt);
-    }
-}
-fn execute_sql(usql_conn: &mut Usql, sql: &str) {
-    println!("{:?}", sql);
+// Execute SQL statement via usql
+pub fn execute_sql(usql_conn: &mut Usql, sql: &str) {
     match usql_conn.execute(sql) {
         Ok(result) => println!("Success: {:?}", result),
         Err(e) => eprintln!("Error executing query: {:?}", e),
     }
 }
 
+// Generate create table statement, currently we only support GreptimeDB dialect
 fn gen_create_table_stmt(hypertable: &str, cols: &[&str]) -> String {
     let mut pk: Option<&str> = None;
     let mut columns_def: Vec<String> = cols
@@ -90,13 +55,14 @@ fn gen_create_table_stmt(hypertable: &str, cols: &[&str]) -> String {
     format!("CREATE TABLE {} ({});", hypertable, columns_def.join(", "))
 }
 
+// Generate insert statement, currently we only support GreptimeDB dialect
 fn gen_insert_stmt(hypertable: &str, cols: &[&str], data: &[Vec<String>]) -> String {
     let mut insert_stmt = format!("INSERT INTO {}({}) VALUES", hypertable, cols.join(","));
 
     for (i, row) in data.iter().enumerate() {
         let values = row
             .iter()
-            .map(|value| format!("'{}'", value.replace('\'', "''"))) // 转义单引号
+            .map(|value| format!("'{}'", value.replace('\'', "''")))
             .collect::<Vec<_>>()
             .join(",");
 
@@ -107,21 +73,18 @@ fn gen_insert_stmt(hypertable: &str, cols: &[&str], data: &[Vec<String>]) -> Str
     insert_stmt
 }
 
-#[cfg(test)]
-mod tests {
-    use crate::usql::usql::Usql;
-
-    use super::{DataLoader, DataLoaderConfig, GreptimeDataLoader};
-
-    #[test]
-    fn test_generate_inserts() {
-        let config = DataLoaderConfig {
-            workers: 1,
-            chunk_size: 10,
-        };
-
-        let loader = GreptimeDataLoader { config };
-        let usql = Usql::new("mysql://127.0.0.1:4002");
-        loader.load_data(Some(usql));
-    }
+// Read parquet file and return RecordBatch
+pub fn read_parquet_file(path: PathBuf) -> Result<RecordBatch> {
+    let file = File::open(path).context(InvalidFilePathSnafu {
+        location: location!(),
+    })?;
+    let builder =
+        ParquetRecordBatchReaderBuilder::try_new(file).context(ReadParquetFileSnafu {})?;
+    let mut reader = builder.build().context(ReadParquetFileSnafu {})?;
+    let record_batch = reader
+        .next()
+        .transpose()
+        .context(ArrowFileSnafu {})?
+        .ok_or_else(|| EndOfParquetFileSnafu {}.build())?;
+    Ok(record_batch)
 }

@@ -1,9 +1,14 @@
-use anyhow::Result;
+use crate::{
+    common::error::{Result, WriteParquetFileSnafu},
+    loader::{field, tag, timestamp},
+};
 use arrow::{
     array::{Int32Array, RecordBatch, StringArray, TimestampMicrosecondArray},
     datatypes::{DataType, Field, Schema, TimeUnit},
 };
+use greptime_proto::v1::{ColumnDataType, ColumnSchema};
 use parquet::{arrow::ArrowWriter, file::properties::WriterProperties};
+use snafu::ResultExt;
 use std::{fs::File, sync::Arc};
 
 use super::data_generator::{DataGenerator, DataGeneratorConfig};
@@ -31,9 +36,6 @@ impl LogData {
                 Field::new("referrer", DataType::Utf8, false),
             ])),
         }
-    }
-    fn default() -> Self {
-        Self::new()
     }
 }
 
@@ -78,11 +80,31 @@ impl DataGenerator for LogDataGenerator {
 
     fn write(&self, to_write: &RecordBatch, file: File) -> Result<()> {
         let props = WriterProperties::builder().build();
-        let mut parquet_writer = ArrowWriter::try_new(file, to_write.schema(), Some(props))?;
+        let mut parquet_writer = ArrowWriter::try_new(file, to_write.schema(), Some(props))
+            .context(WriteParquetFileSnafu {})?;
 
-        parquet_writer.write(to_write)?;
-        parquet_writer.close()?;
+        parquet_writer
+            .write(to_write)
+            .context(WriteParquetFileSnafu {})?;
+        parquet_writer.close().context(WriteParquetFileSnafu {})?;
         Ok(())
+    }
+
+    fn schema() -> Vec<ColumnSchema> {
+        vec![
+            tag("ip_address", ColumnDataType::String),
+            field("user_agent", ColumnDataType::String),
+            timestamp("timestamp", ColumnDataType::TimestampMicrosecond),
+            field("request_method", ColumnDataType::String),
+            field("request_url", ColumnDataType::String),
+            field("response_code", ColumnDataType::Int32),
+            field("response_size", ColumnDataType::Int32),
+            field("referrer", ColumnDataType::String),
+        ]
+    }
+
+    fn table_name() -> &'static str {
+        "greptime-bench-log"
     }
 }
 
