@@ -49,9 +49,9 @@ fn generate_data(file_path: &str) {
     // 打开指定的文件路径
     let file = File::create(file_path).expect("Failed to create file");
 
-    log_data_generator
-        .write(&record_batch, file)
-        .expect("Failed to write record batch to file");
+    // log_data_generator
+    //     .write(&record_batch, file)
+    //     .expect("Failed to write record batch to file");
 }
 fn load_data() {
     // let config = DataLoaderConfig {

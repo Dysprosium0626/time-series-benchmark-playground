@@ -27,11 +27,12 @@ pub struct DataGeneratorConfig {
 
 pub trait DataGenerator {
     /// Generate Data
-    fn generate(&self) -> Result<RecordBatch>;
+    fn generate(&self) -> Result<Vec<RecordBatch>>;
     /// Write Data
-    fn write(&self, to_write: &RecordBatch, file: File) -> Result<()>;
+    fn write(&self, to_write: Vec<RecordBatch>, file: File) -> Result<()>;
     // Get schema of generated data
-    fn schema() -> Vec<ColumnSchema>;
+    fn schema(table_name: &str) -> Vec<ColumnSchema>;
     // Table name
-    fn table_name() -> &'static str;
+    fn table_name(table_name: &str) -> &'static str;
+    fn table_names() -> Vec<&'static str>;
 }

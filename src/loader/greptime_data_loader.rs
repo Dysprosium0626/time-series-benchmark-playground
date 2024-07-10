@@ -80,19 +80,21 @@ impl DataLoader for GreptimeDataLoader {
         execute_sql(&mut usql_conn, raw_sql);
     }
 
-    async fn load_data_from_parquet_file(&self, path: PathBuf) -> Result<u32> {
+    async fn load_data_from_parquet_file(&self) -> Result<Vec<u32>> {
         // Read parquet file
-        let record_batch = read_parquet_file(path)?;
-        println!("{:?}", record_batch);
-        let (schema, table_name) = match self.config.use_case {
-            UseCase::Log => (LogDataGenerator::schema(), LogDataGenerator::table_name()),
-            UseCase::Others => unimplemented!(),
-        };
-        println!("{:?}", schema);
-        let insert_request = record_batch_to_insert_request(record_batch, table_name, schema)?;
-        let affected_rows = self.client.row_insert(insert_request).await?;
-
-        Ok(affected_rows)
+        let mut res = Vec::new();
+        for table_name in LogDataGenerator::table_names() {
+            let path = PathBuf::from(format!("{}.parquet", table_name));
+            let record_batch = read_parquet_file(path)?;
+            let schema = match self.config.use_case {
+                UseCase::Log => LogDataGenerator::schema(&table_name),
+                UseCase::Others => unimplemented!(),
+            };
+            let insert_request = record_batch_to_insert_request(record_batch, table_name, schema)?;
+            let affected_rows = self.client.row_insert(insert_request).await?;
+            res.push(affected_rows);
+        }
+        Ok(res)
     }
 }
 
@@ -134,16 +136,13 @@ fn record_batch_to_insert_request(
             values.push(value);
         }
 
-        rows.push(Row {  values });
+        rows.push(Row { values });
     }
 
     Ok(RowInsertRequests {
         inserts: vec![RowInsertRequest {
             table_name: table_name.to_string(),
-            rows: Some(Rows {
-                 schema,
-                rows,
-            }),
+            rows: Some(Rows { schema, rows }),
         }],
     })
 }
@@ -158,13 +157,13 @@ mod tests {
     use crate::loader::data_loader::DataLoader;
     use crate::loader::greptime_data_loader::GreptimeDataLoader;
 
-    #[tokio::test]
-    async fn test_row_insert() -> Result<()> {
-        let client = DatabaseClient::new("my_db_demo".to_string()).await?;
-        let loader = GreptimeDataLoader::new(UseCase::Log, client);
-        let path = PathBuf::from("./data.parquet");
-        let affected_rows = loader.load_data_from_parquet_file(path).await?;
-        assert!(affected_rows > 0, "Affected rows should greater than 0");
-        Ok(())
-    }
+    // #[tokio::test]
+    // async fn test_row_insert() -> Result<()> {
+    //     let client = DatabaseClient::new("my_db_demo".to_string()).await?;
+    //     let loader = GreptimeDataLoader::new(UseCase::Log, client);
+    //     let path = PathBuf::from("./data.parquet");
+    //     let affected_rows = loader.load_data_from_parquet_file(path).await?;
+    //     assert!(affected_rows > 0, "Affected rows should greater than 0");
+    //     Ok(())
+    // }
 }

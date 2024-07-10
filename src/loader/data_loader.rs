@@ -20,8 +20,7 @@ pub trait DataLoader {
     fn load_data_from_raw_sql(&self, usql: Option<Usql>, raw_sql: &str);
     fn load_data_from_parquet_file(
         &self,
-        path: PathBuf,
-    ) -> impl std::future::Future<Output = Result<u32>> + Send;
+    ) -> impl std::future::Future<Output = Result<Vec<u32>>> + Send;
 }
 
 // Execute SQL statement via usql
