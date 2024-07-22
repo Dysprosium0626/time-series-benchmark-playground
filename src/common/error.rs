@@ -1,5 +1,6 @@
 use arrow::error::ArrowError;
 use snafu::{Location, Snafu};
+use time::error::Parse;
 use tonic::Status;
 
 #[derive(Debug, Snafu)]
@@ -64,6 +65,12 @@ pub enum Error {
     IllegalDatabaseResponse { err_msg: String },
     // #[snafu(display("Failed to send request with streaming: {}", err_msg))]
     // ClientStreaming { err_msg: String, location: Location },
+    #[snafu(display("Failed to parse date, source: {}", source))]
+    ParseDate {
+        source: Parse,
+        #[snafu(implicit)]
+        location: Location,
+    },
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

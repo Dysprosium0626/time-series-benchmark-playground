@@ -2,7 +2,7 @@ use std::{fs::File, path::PathBuf};
 
 use arrow::array::RecordBatch;
 use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
-use snafu::{location, Location, ResultExt};
+use snafu::{location, ResultExt};
 
 use crate::common::error::{
     ArrowFileSnafu, EndOfParquetFileSnafu, InvalidFilePathSnafu, ReadParquetFileSnafu, Result,

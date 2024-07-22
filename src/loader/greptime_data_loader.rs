@@ -87,7 +87,7 @@ impl DataLoader for GreptimeDataLoader {
             let path = PathBuf::from(format!("{}.parquet", table_name));
             let record_batch = read_parquet_file(path)?;
             let schema = match self.config.use_case {
-                UseCase::Log => LogDataGenerator::schema(&table_name),
+                UseCase::Log => LogDataGenerator::schema(table_name),
                 UseCase::Others => unimplemented!(),
             };
             let insert_request = record_batch_to_insert_request(record_batch, table_name, schema)?;
@@ -149,13 +149,13 @@ fn record_batch_to_insert_request(
 
 #[cfg(test)]
 mod tests {
-    use std::path::PathBuf;
+    // use std::path::PathBuf;
 
-    use crate::client::greptime::DatabaseClient;
-    use crate::common::error::Result;
-    use crate::generator::data_generator::UseCase;
-    use crate::loader::data_loader::DataLoader;
-    use crate::loader::greptime_data_loader::GreptimeDataLoader;
+    // use crate::client::greptime::DatabaseClient;
+    // use crate::common::error::Result;
+    // use crate::generator::data_generator::UseCase;
+    // use crate::loader::data_loader::DataLoader;
+    // use crate::loader::greptime_data_loader::GreptimeDataLoader;
 
     // #[tokio::test]
     // async fn test_row_insert() -> Result<()> {

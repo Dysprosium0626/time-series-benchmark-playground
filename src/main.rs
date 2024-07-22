@@ -1,9 +1,3 @@
-use std::fs::File;
-
-use greptime_bench::generator::{
-    data_generator::{DataGenerator, DataGeneratorConfig, UseCase},
-    log_data_generator::{LogData, LogDataGenerator},
-};
 use std::env;
 
 fn main() {
@@ -30,24 +24,24 @@ fn main() {
     }
 }
 fn generate_data(file_path: &str) {
-    let log_data_generator = LogDataGenerator {
-        config: DataGeneratorConfig::new(
-            60,
-            "2021-01-01T00:00:00Z".to_string(),
-            "2021-01-01T01:00:00Z".to_string(),
-            123,
-            10,
-            UseCase::Log,
-        ),
-        log_data: LogData::new(),
-    };
+    // let log_data_generator = LogDataGenerator {
+    //     generator_config: DataGeneratorConfig::new(
+    //         60,
+    //         "2021-01-01T00:00:00Z".to_string(),
+    //         "2021-01-01T01:00:00Z".to_string(),
+    //         123,
+    //         10,
+    //         UseCase::Log,
+    //     ),
+    //     log_data: LogData::new(),
+    // };
 
-    let record_batch = log_data_generator
-        .generate()
-        .expect("Failed to generate record batch");
+    // let record_batch = log_data_generator
+    //     .generate()
+    //     .expect("Failed to generate record batch");
 
-    // 打开指定的文件路径
-    let file = File::create(file_path).expect("Failed to create file");
+    // // 打开指定的文件路径
+    // let file = File::create(file_path).expect("Failed to create file");
 
     // log_data_generator
     //     .write(&record_batch, file)
